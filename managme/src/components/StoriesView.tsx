@@ -46,7 +46,7 @@ export function StoriesView({ project, user }: Props) {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm('Na pewno usunąć historyjkę?')) return
+    if (!confirm('Na pewno usunąć historyjkę razem z jej zadaniami?')) return
     await api.deleteStory(id)
     if (editing?.id === id) setEditing(undefined)
     await reload()

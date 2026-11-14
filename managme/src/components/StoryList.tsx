@@ -1,5 +1,6 @@
 import { Badge, Button, Table } from 'react-bootstrap'
-import { priorityLabels, stateLabels, type Priority, type Story, type StoryState } from '../models/Story'
+import { priorityLabels, stateLabels, type Story } from '../models/Story'
+import { priorityColors, stateColors } from '../ui/colors'
 
 type Props = {
   stories: Story[]
@@ -7,17 +8,6 @@ type Props = {
   onDelete: (id: string) => void
 }
 
-const priorityColors: Record<Priority, string> = {
-  low: 'secondary',
-  medium: 'warning',
-  high: 'danger',
-}
-
-const stateColors: Record<StoryState, string> = {
-  todo: 'secondary',
-  doing: 'primary',
-  done: 'success',
-}
 
 export function StoryList({ stories, onEdit, onDelete }: Props) {
   if (stories.length === 0) {

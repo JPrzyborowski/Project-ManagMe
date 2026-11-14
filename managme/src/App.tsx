@@ -4,11 +4,13 @@ import { api } from './api/ApiService'
 import { userService } from './api/UserService'
 import { ProjectForm } from './components/ProjectForm'
 import { ProjectList } from './components/ProjectList'
-import { StoriesView } from './components/StoriesView'
+import { ProjectView } from './components/ProjectView'
 import type { NewProject, Project } from './models/Project'
+import { fullName, roleLabels } from './models/User'
 
 export default function App() {
   const user = userService.getLoggedUser()
+  const users = userService.getAll()
   const [loaded, setLoaded] = useState(false)
   const [projects, setProjects] = useState<Project[]>([])
   const [activeId, setActiveId] = useState<string | undefined>()
@@ -45,7 +47,7 @@ export default function App() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm('Na pewno usunąć projekt razem z jego historyjkami?')) return
+    if (!confirm('Na pewno usunąć projekt razem z jego historyjkami i zadaniami?')) return
     await api.deleteProject(id)
     if (editing?.id === id) setEditing(undefined)
     await reload()
@@ -71,7 +73,7 @@ export default function App() {
         <Container>
           <Navbar.Brand>ManagMe</Navbar.Brand>
           <Navbar.Text>
-            Zalogowany: {user.firstName} {user.lastName}
+            Zalogowany: {fullName(user)} ({roleLabels[user.role]})
           </Navbar.Text>
         </Container>
       </Navbar>
@@ -88,7 +90,7 @@ export default function App() {
                   Zmień projekt
                 </Button>
               </div>
-              <StoriesView key={activeProject.id} project={activeProject} user={user} />
+              <ProjectView key={activeProject.id} project={activeProject} user={user} users={users} />
             </>
           ) : (
             <>

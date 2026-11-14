@@ -1,9 +1,11 @@
 import type { NewProject, Project } from '../models/Project'
 import type { NewStory, Story } from '../models/Story'
+import type { Task, TaskFormData } from '../models/Task'
 
 export class ApiService {
   private readonly projectsKey = 'managme:projects'
   private readonly storiesKey = 'managme:stories'
+    private readonly tasksKey = 'managme:tasks'
   private readonly activeProjectKey = 'managme:activeProjectId'
 
   private read<T>(key: string): T[] {
@@ -37,6 +39,10 @@ export class ApiService {
   }
 
   async deleteProject(id: string): Promise<void> {
+
+        const stories = this.read<Story>(this.storiesKey)
+    const storyIds = new Set(stories.filter((s) => s.projectId === id).map((s) => s.id))
+
     this.write(
       this.projectsKey,
       this.read<Project>(this.projectsKey).filter((p) => p.id !== id),
@@ -44,6 +50,10 @@ export class ApiService {
     this.write(
       this.storiesKey,
       this.read<Story>(this.storiesKey).filter((s) => s.projectId !== id),
+    )
+    this.write(
+      this.tasksKey,
+      this.read<Task>(this.tasksKey).filter((t) => !storyIds.has(t.storyId)),
     )
     if (localStorage.getItem(this.activeProjectKey) === id) {
       localStorage.removeItem(this.activeProjectKey)
@@ -88,7 +98,48 @@ export class ApiService {
       this.storiesKey,
       this.read<Story>(this.storiesKey).filter((s) => s.id !== id),
     )
+    this.write(
+      this.tasksKey,
+      this.read<Task>(this.tasksKey).filter((t) => t.storyId !== id),
+    )
   }
-}
+
+
+  async getTaskByProject(projectId: string): Promise<Task[]> {
+      const storyIds = new Set(
+        this.read<Story>(this.storiesKey)
+          .filter((s) => s.projectId === projectId)
+          .map((s) => s.id),
+      )
+      return this.read<Task>(this.tasksKey).filter((t) => storyIds.has(t.storyId))  
+    }
+   
+async createTask(data: TaskFormData): Promise<Task> {
+      const task: Task = {
+        id: crypto.randomUUID(),
+        createdAt: new Date().toISOString(),
+        state: 'todo',
+        workedHours: 0,
+        ...data,
+      }
+      this.write(this.tasksKey, [...this.read<Task>(this.tasksKey), task])
+      return task
+    }
+
+    async updateTask(task: Task): Promise<void> {
+      this.write(
+        this.tasksKey,
+        this.read<Task>(this.tasksKey).map((t) => (t.id === task.id ? task : t)),
+      )
+    }
+
+    async deleteTask(id: string): Promise<void> {
+      this.write(
+        this.tasksKey,
+        this.read<Task>(this.tasksKey).filter((t) => t.id !== id),
+      )
+    }
+
+  }
 
 export const api = new ApiService()
