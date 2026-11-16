@@ -1,0 +1,10 @@
+# Sekrety i konfiguracja środowiska
+.env
+.env.*
+!.env.example
+
+# Zależności
+node_modules/
+
+# Pliki wygenerowane
+dist/

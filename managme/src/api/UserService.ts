@@ -4,7 +4,7 @@ import type { User } from '../models/User'
 
 export class UserService {
 
-  private readonly loggedUserId = 'user-1'  
+  
   private readonly users: User[] = [
      { id: 'user-1', firstName: 'Jan', lastName: 'Kowalski', role: 'admin' },
     { id: 'user-2', firstName: 'Anna', lastName: 'Nowak', role: 'devops' },
@@ -13,14 +13,7 @@ export class UserService {
   ]
 
 
-  getLoggedUser(): User {
-    const user = this.users.find((u) => u.id === this.loggedUserId) 
-    if (!user) { 
-      throw new Error('Zalgoowany uzytkownik nie istnieje')
-    }
-    return user
-  }
-
+ 
   getAll(): User[] {
     return this.users
   }

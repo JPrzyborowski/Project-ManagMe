@@ -3,62 +3,83 @@ import type { NewStory, Story } from '../models/Story'
 import type { Task, TaskFormData } from '../models/Task'
 
 export class ApiService {
-  private readonly projectsKey = 'managme:projects'
-  private readonly storiesKey = 'managme:stories'
-    private readonly tasksKey = 'managme:tasks'
+
   private readonly activeProjectKey = 'managme:activeProjectId'
 
-  private read<T>(key: string): T[] {
-    const raw = localStorage.getItem(key)
-    return raw ? (JSON.parse(raw) as T[]) : []
+  
+
+
+ 
+async getProjects(): Promise<Project[]> {
+  const response = await fetch("http://localhost:3000/api/projects");
+
+  if (!response.ok) {
+    throw new Error("Nie udało się pobrać projektów");
   }
 
-  private write<T>(key: string, items: T[]): void {
-    localStorage.setItem(key, JSON.stringify(items))
+  return response.json();
+}
+
+
+
+  
+async createProject(data: NewProject): Promise<Project> {
+  const response = await fetch("http://localhost:3000/api/projects", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    throw new Error("Nie udało się utworzyć projektu");
   }
 
-  async getProjects(): Promise<Project[]> {
-    return this.read<Project>(this.projectsKey)
-  }
+  return response.json();
+}
 
-  async getProjectById(id: string): Promise<Project | undefined> {
-    return this.read<Project>(this.projectsKey).find((p) => p.id === id)
-  }
 
-  async createProject(data: NewProject): Promise<Project> {
-    const project: Project = { id: crypto.randomUUID(), ...data }
-    this.write(this.projectsKey, [...this.read<Project>(this.projectsKey), project])
-    return project
-  }
 
-  async updateProject(project: Project): Promise<void> {
-    this.write(
-      this.projectsKey,
-      this.read<Project>(this.projectsKey).map((p) => (p.id === project.id ? project : p)),
-    )
-  }
-
-  async deleteProject(id: string): Promise<void> {
-
-        const stories = this.read<Story>(this.storiesKey)
-    const storyIds = new Set(stories.filter((s) => s.projectId === id).map((s) => s.id))
-
-    this.write(
-      this.projectsKey,
-      this.read<Project>(this.projectsKey).filter((p) => p.id !== id),
-    )
-    this.write(
-      this.storiesKey,
-      this.read<Story>(this.storiesKey).filter((s) => s.projectId !== id),
-    )
-    this.write(
-      this.tasksKey,
-      this.read<Task>(this.tasksKey).filter((t) => !storyIds.has(t.storyId)),
-    )
-    if (localStorage.getItem(this.activeProjectKey) === id) {
-      localStorage.removeItem(this.activeProjectKey)
+async updateProject(project: Project): Promise<void> {
+  const response = await fetch(
+    `http://localhost:3000/api/projects/${project.id}`,
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name: project.name,
+        description: project.description,
+      }),
     }
+  );
+
+  if (!response.ok) {
+    throw new Error("Nie udało się zaktualizować projektu");
   }
+}
+
+  
+async deleteProject(id: string): Promise<void> {
+  const response = await fetch(
+    `http://localhost:3000/api/projects/${id}`,
+    {
+      method: "DELETE",
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error("Nie udało się usunąć projektu");
+  }
+
+  if (localStorage.getItem(this.activeProjectKey) === id) {
+    localStorage.removeItem(this.activeProjectKey);
+  }
+}
+
+
 
   async getActiveProjectId(): Promise<string | undefined> {
     return localStorage.getItem(this.activeProjectKey) ?? undefined
@@ -72,74 +93,150 @@ export class ApiService {
     localStorage.removeItem(this.activeProjectKey)
   }
 
-  async getStoriesByProject(projectId: string): Promise<Story[]> {
-    return this.read<Story>(this.storiesKey).filter((s) => s.projectId === projectId)
+ 
+async getStoriesByProject(projectId: string): Promise<Story[]> {
+  const response = await fetch(
+    `http://localhost:3000/api/stories?projectId=${encodeURIComponent(projectId)}`
+  );
+
+  if (!response.ok) {
+    throw new Error("Nie udało się pobrać historyjek");
   }
 
-  async createStory(data: NewStory): Promise<Story> {
-    const story: Story = {
-      id: crypto.randomUUID(),
-      createdAt: new Date().toISOString(),
-      ...data,
+  return response.json();
+}
+
+
+async createStory(data: NewStory): Promise<Story> {
+  const response = await fetch("http://localhost:3000/api/stories", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    throw new Error("Nie udało się utworzyć historyjki");
+  }
+
+  return response.json();
+}
+
+
+
+async updateStory(story: Story): Promise<void> {
+  const response = await fetch(
+    `http://localhost:3000/api/stories/${story.id}`,
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name: story.name,
+        description: story.description,
+        priority: story.priority,
+        state: story.state,
+      }),
     }
-    this.write(this.storiesKey, [...this.read<Story>(this.storiesKey), story])
-    return story
+  );
+
+  if (!response.ok) {
+    throw new Error("Nie udało się zaktualizować historyjki");
   }
-
-  async updateStory(story: Story): Promise<void> {
-    this.write(
-      this.storiesKey,
-      this.read<Story>(this.storiesKey).map((s) => (s.id === story.id ? story : s)),
-    )
-  }
-
-  async deleteStory(id: string): Promise<void> {
-    this.write(
-      this.storiesKey,
-      this.read<Story>(this.storiesKey).filter((s) => s.id !== id),
-    )
-    this.write(
-      this.tasksKey,
-      this.read<Task>(this.tasksKey).filter((t) => t.storyId !== id),
-    )
-  }
+}
 
 
-  async getTaskByProject(projectId: string): Promise<Task[]> {
-      const storyIds = new Set(
-        this.read<Story>(this.storiesKey)
-          .filter((s) => s.projectId === projectId)
-          .map((s) => s.id),
-      )
-      return this.read<Task>(this.tasksKey).filter((t) => storyIds.has(t.storyId))  
+
+async deleteStory(id: string): Promise<void> {
+  const response = await fetch(
+    `http://localhost:3000/api/stories/${id}`,
+    {
+      method: "DELETE",
     }
-   
+  );
+
+  if (!response.ok) {
+    throw new Error("Nie udało się usunąć historyjki");
+  }
+}
+
+
+
+
+async getTaskByProject(projectId: string): Promise<Task[]> {
+  const response = await fetch(
+    `http://localhost:3000/api/tasks?projectId=${encodeURIComponent(projectId)}`
+  );
+
+  if (!response.ok) {
+    throw new Error("Nie udało się pobrać zadań");
+  }
+
+  return response.json();
+}
+
+
 async createTask(data: TaskFormData): Promise<Task> {
-      const task: Task = {
-        id: crypto.randomUUID(),
-        createdAt: new Date().toISOString(),
-        state: 'todo',
-        workedHours: 0,
-        ...data,
-      }
-      this.write(this.tasksKey, [...this.read<Task>(this.tasksKey), task])
-      return task
-    }
+  const response = await fetch("http://localhost:3000/api/tasks", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  });
 
-    async updateTask(task: Task): Promise<void> {
-      this.write(
-        this.tasksKey,
-        this.read<Task>(this.tasksKey).map((t) => (t.id === task.id ? task : t)),
-      )
+  if (!response.ok) {
+    throw new Error("Nie udało się utworzyć zadania");
+  }
+
+  return response.json();
+}
+
+
+   
+async updateTask(task: Task): Promise<void> {
+  const response = await fetch(
+    `http://localhost:3000/api/tasks/${task.id}`,
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name: task.name,
+        description: task.description,
+        priority: task.priority,
+        state: task.state,
+        estimatedHours: task.estimatedHours,
+        workedHours: task.workedHours,
+        startedAt: task.startedAt,
+        finishedAt: task.finishedAt,
+        assigneeId: task.assigneeId,
+      }),
     }
+  );
+
+  if (!response.ok) {
+    throw new Error("Nie udało się zaktualizować zadania");
+  }
+}
+
 
     async deleteTask(id: string): Promise<void> {
-      this.write(
-        this.tasksKey,
-        this.read<Task>(this.tasksKey).filter((t) => t.id !== id),
-      )
+  const response = await fetch(
+    `http://localhost:3000/api/tasks/${id}`,
+    {
+      method: "DELETE",
     }
+  );
 
+  if (!response.ok) {
+    throw new Error("Nie udało się usunąć zadania");
   }
+}
+
+}
 
 export const api = new ApiService()
